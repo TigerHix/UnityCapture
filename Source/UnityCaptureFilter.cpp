@@ -33,15 +33,15 @@
 #include <strsafe.h>
 #include <math.h>
 
-#define CaptureSourceName L"Unity Video Capture"
+#define CaptureSourceName L"Warudo Video Capture"
 
 //Use separate GUIDs for 64bit and 32bit so both can be installed at the same time
 #ifdef _WIN64
-DEFINE_GUID(CLSID_UnityCaptureService,    0x5c2cd55c, 0x92ad, 0x4999, 0x86, 0x66, 0x91, 0x2b, 0xd3, 0xe7, 0x00, 0x10);
-DEFINE_GUID(CLSID_UnityCaptureProperties, 0x5c2cd55c, 0x92ad, 0x4999, 0x86, 0x66, 0x91, 0x2b, 0xd3, 0xe7, 0x00, 0x11);
+DEFINE_GUID(CLSID_UnityCaptureService,    0x5c2cd56c, 0x92ad, 0x4999, 0x86, 0x66, 0x91, 0x2b, 0xd3, 0xe7, 0x00, 0x10);
+DEFINE_GUID(CLSID_UnityCaptureProperties, 0x5c2cd56c, 0x92ad, 0x4999, 0x86, 0x66, 0x91, 0x2b, 0xd3, 0xe7, 0x00, 0x11);
 #else
-DEFINE_GUID(CLSID_UnityCaptureService,    0x5c2cd55c, 0x92ad, 0x4999, 0x86, 0x66, 0x91, 0x2b, 0xd3, 0xe7, 0x00, 0x20);
-DEFINE_GUID(CLSID_UnityCaptureProperties, 0x5c2cd55c, 0x92ad, 0x4999, 0x86, 0x66, 0x91, 0x2b, 0xd3, 0xe7, 0x00, 0x21);
+DEFINE_GUID(CLSID_UnityCaptureService,    0x5c2cd56c, 0x92ad, 0x4999, 0x86, 0x66, 0x91, 0x2b, 0xd3, 0xe7, 0x00, 0x20);
+DEFINE_GUID(CLSID_UnityCaptureProperties, 0x5c2cd56c, 0x92ad, 0x4999, 0x86, 0x66, 0x91, 0x2b, 0xd3, 0xe7, 0x00, 0x21);
 #endif
 
 //List of resolutions offered by this filter
@@ -143,7 +143,7 @@ private:
 			case SharedImageMemory::RECEIVERES_CAPTUREINACTIVE:{
 				//Show color pattern indicating that Unity is not sending frame data yet
 				char DisplayString[128], *DisplayStrings[] = { DisplayString };
-				int DisplayStringLens[] = { sprintf_s(DisplayString, sizeof(DisplayString), "Unity has not started sending image data (Capture Device #%d)", 1+m_pReceiver->GetCapNum()) };
+				int DisplayStringLens[] = { sprintf_s(DisplayString, sizeof(DisplayString), "Warudo has not started streaming video (Internal device #%d)", 1+m_pReceiver->GetCapNum()) };
 				FillErrorPattern(ErrorDrawModes[EDC_UnityNeverStarted], &State, 1, DisplayStrings, DisplayStringLens, m_llFrame);
 				Sleep((DWORD)(m_avgTimePerFrame / 10000 - 1)); //just wait a bit until capturing next frame
 				break;}
@@ -155,7 +155,7 @@ private:
 			case SharedImageMemory::RECEIVERES_OLDFRAME:{
 				if (++m_llFrameMissCount < m_llFrameMissMax) break;
 				//Show color pattern when received more than X frames without new image (probably Unity stopped sending data)
-				char DisplayString[] = "Unity has stopped sending image data", *DisplayStrings[] = { DisplayString };
+				char DisplayString[] = "Warudo has stopped streaming video", *DisplayStrings[] = { DisplayString };
 				int DisplayStringLens[] = { sizeof(DisplayString) - 1 };
 				FillErrorPattern(ErrorDrawModes[EDC_UnitySendingStopped], &State, 1, DisplayStrings, DisplayStringLens, m_llFrame);
 				break;}
@@ -1103,7 +1103,10 @@ static HRESULT RegisterFilters(BOOL bRegister)
 					StringFromCLSID(GetCLSIDUnityCaptureServiceNum(i), &CLSID_Filter_Str);
 					StringCchPrintfW(strKey, 256, L"SOFTWARE\\Classes\\CLSID\\%s\\Instance\\%s", CLSID_Category_Str, CLSID_Filter_Str);
 					RegOpenKeyExW(HKEY_LOCAL_MACHINE, strKey, 0, KEY_ALL_ACCESS, &hKey);
-					RegSetValueExA(hKey, "DevicePath", 0, REG_SZ, (LPBYTE)"foo:bar", (DWORD)sizeof("foo:bar"));
+					//Unique device path for each camera
+					char devicePath[32];
+					sprintf_s(devicePath, sizeof(devicePath), "WarudoVirtualCam%d", 1 + i);
+					RegSetValueExA(hKey, "DevicePath", 0, REG_SZ, (LPBYTE)devicePath, (DWORD)sizeof(devicePath));
 					RegCloseKey(hKey);
 				}
 				if (FAILED(hr)) MessageBoxA(0, "Service RegisterFilter of IFilterMapper2 failed", "RegisterFilters setup", NULL);
